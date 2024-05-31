@@ -1,0 +1,58 @@
+#!/bin/bash
+
+#run 1 is an "a" run, and run 0 is a "b" run.
+
+#Find the nodes that are still in the CG state by finding the nodes
+#that are in both a and b lists, a.k.a the nodes still in the CG state, 
+#reboot them.
+
+#After comparing, the function also deletes all the nodes in the list
+#to prepare for the next run.
+
+runset=1 #comment out after running for the very first time!
+
+FindNodes(){
+    if [ $runset = 1 ]; then
+        comm -12 alist blist >> matches
+            for node in $(cat matches) 
+            do
+                echo "$node"
+                rpower "$node" reset
+            done
+        echo >> alist
+        echo >> matches
+        $runset '=' 0
+    else
+        comm -12 blist alist >> matches
+            for node in $(cat matches)
+            do
+                echo "$node"
+                rpower "$node" reset
+            done
+        echo >> blist
+        $runset '=' 1
+fi 
+}
+
+#Create list of nodes in the CG state.
+CreateList(){
+    if [ $runset = 1 ]; then
+        squeue -t CG -h -o %N >> alist
+    else
+        squeue -t CG -h -o %N >> blist
+    fi
+}
+
+#Set nodes back to resume state
+SetNodeState(){
+    for node in $(cat matches)
+    do
+        echo "$node"
+        scontrol update nodename="$node" state=resume
+    done
+}
+
+CreateList
+FindNodes
+sleep 600
+SetNodeState
