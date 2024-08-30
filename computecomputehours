@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo "Ender dates in YYYY-MM-DD format."
+
+read -p "Enter Start Date: " sd
+read -p "Enter End Date: " ed
+read -p "Enter r for partition or n for nodes: " nodeoptions
+read -p "Enter the node list or partition name: " nodestocalc
+
+sacct -$nodeoptions "$nodestocalc" -o cputimeraw -S $sd -E $ed -s COMPLETED >> jobs.out
+
+awk '{ sum += $1 } END { print sum }' jobs.out >> jobhours.out
+awk '{print $1 / 3600}' jobhours.out >> jobstotal
+cat jobstotal
+
+rm -f job*
+#echo -"$nodeoptions"
