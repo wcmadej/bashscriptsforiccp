@@ -26,7 +26,7 @@ while read -r line; do
 
 done < list
 
-# Divide the total sum by 360
+# Divide the total sum by 3600 to get hours
 final_result=$(echo "scale=2; $total_sum / 3600" | bc)
 
 # Output the final result
