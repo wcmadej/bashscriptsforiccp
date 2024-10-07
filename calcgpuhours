@@ -3,9 +3,11 @@
 # Initialize a total sum variable
 total_sum=0
 
-read -p "Enter username:" usern
-read -p "Enter Start Date: " sd
-read -p "Enter End Date: " ed
+#read -p "Enter username:" usern
+
+usern=$(whoami)
+ed=$(date +'%Y-%m-%d')
+sd="2024-01-01"
 
 sacct -r IllinoisComputes-GPU -u $usern -S $sd -E $ed -s COMPLETED -o ElapsedRaw,ReqTRES -X -n > list
 
@@ -22,7 +24,6 @@ while read -r line; do
     # Add the product to the total sum
     total_sum=$((total_sum + product))
 
-#done < "${1:-/dev/stdin}"
 done < list
 
 # Divide the total sum by 360
