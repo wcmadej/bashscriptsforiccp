@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo "Ender dates in YYYY-MM-DD format."
+
+read -p "Enter Start Date: " sd
+read -p "Enter End Date: " ed
+read -p "Enter the group name: " gn
+
+sacct -g $gn -o cputimeraw -S $sd -E $ed -s COMPLETED > jobs.out
+awk '{ sum += $1 } END { print sum }' jobs.out >> jobhours.out
+awk '{print $1 / 3600}' jobhours.out >> jobstotal
+cat jobstotal
+echo "CPU Hours used by $gn between $sd and $ed"
+
+rm -f job*
