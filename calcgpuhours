@@ -27,7 +27,7 @@ while read -r line; do
 done < list
 
 # Divide the total sum by 360
-final_result=$(echo "scale=2; $total_sum / 360" | bc)
+final_result=$(echo "scale=2; $total_sum / 3600" | bc)
 
 # Output the final result
 echo "You have used $final_result GPU hours"
