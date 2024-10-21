@@ -1,23 +1,15 @@
 #!/bin/bash
 
-echo "Ender dates in YYYY-MM-DD format."
+echo "Enter dates in YYYY-MM-DD format."
 
 read -p "Enter Start Date: " sd
 read -p "Enter End Date: " ed
-read -p "Enter r for partition or n for nodes: " nodeoptions
+read -p "Enter the partition name: " pn
 
-if [[ "$nodeoptions" == "r" || "$nodeoptions" == "n" ]]; then
-        read -p "Enter the node list or partition name: " nodestocalc
-else
-        read -p "Enter r for partition or n for nodes: " nodeoptions
-        read -p "Enter the node list or partition name: " nodestocalc
-fi
-
-sacct -$nodeoptions "$nodestocalc" -o cputimeraw -S $sd -E $ed -s COMPLETED >> jobs.out
+sacct -r $pn -o cputimeraw -S $sd -E $ed -s COMPLETED > jobs.out
 awk '{ sum += $1 } END { print sum }' jobs.out >> jobhours.out
 awk '{print $1 / 3600}' jobhours.out >> jobstotal
 cat jobstotal
-echo "CPU Hours on $nodestocalc between $sd and $ed"
+echo "CPU Hours used by $pn between $sd and $ed"
 
 rm -f job*
-#echo -"$nodeoptions"
