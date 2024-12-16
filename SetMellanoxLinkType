@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #Grab the PCI address of the Mellanox NIC
 devname=$(lspci | grep -i 'Mellanox' | awk '{print $1}')
 
@@ -7,6 +9,6 @@ if [[ -z "$devname" ]]; then
 fi
 
 #Set the link type to ethernet.
-mstconfig -d "$devname" set LINK_TYPE_P1=ETH LINK_TYPE_P2=ETH
+mstconfig -d "$devname" set LINK_TYPE_P1=ETH LINK_TYPE_P2=ETH > /dev/null 2>&1
 
 reboot
