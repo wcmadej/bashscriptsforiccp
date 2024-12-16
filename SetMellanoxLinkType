@@ -8,7 +8,13 @@ if [[ -z "$devname" ]]; then
     exit 1
 fi
 
+line_count=$(mstconfig -d "$mellanoxdevname" query | grep LINK_TYPE | wc -l)
+
 #Set the link type to ethernet.
-mstconfig -d "$devname" set LINK_TYPE_P1=ETH LINK_TYPE_P2=ETH > /dev/null 2>&1
+
+if ["$line_count" -gt 1]; then
+    echo "y" | mstconfig -d "$devname" set LINK_TYPE_P1=ETH LINK_TYPE_P2=ETH > /dev/null 2>&1
+else
+    echo "y" | mstconfig -d "$devname" set LINK_TYPE_P1=ETH > /dev/null 2>&1
 
 reboot
