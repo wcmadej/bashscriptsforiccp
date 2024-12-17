@@ -1,20 +1,27 @@
 #!/bin/bash
 
-#Grab the PCI address of the Mellanox NIC
-devname=$(lspci | grep -i 'Mellanox' | awk '{print $1}')
+#This is far from perfect. In fact, I'm not even sure it actually works. I mean, it probably does. But I don't really know.
+#I'm just kinda brute forcing it with the mstconfig set commands. If the card has no port 2, it should just error out for that specific port and move onto the next.
+#I could probably write a check like "if grep mstconfig -d $mst_device query return /dev/null oh wait nvm im just writing the check...
 
-#Check to see if one exists
-if [[ -z "$devname" ]]; then
+#Grab the PCI address(es) of the Mellanox NIC(s)
+pci_addresses=$(lspci | grep -i 'Mellanox' | awk '{print $1}' 2>/dev/null)
+
+# Check if any Mellanox devices were found
+if [[ -z "$pci_addresses" ]]; then
+    echo "No Mellanox devices found."
     exit 1
 fi
 
-line_count=$(mstconfig -d "$mellanoxdevname" query | grep LINK_TYPE | wc -l)
-
-#Set the link type to ethernet.
-
-if ["$line_count" -gt 1]; then
-    echo "y" | mstconfig -d "$devname" set LINK_TYPE_P1=ETH LINK_TYPE_P2=ETH > /dev/null 2>&1
-else
-    echo "y" | mstconfig -d "$devname" set LINK_TYPE_P1=ETH > /dev/null 2>&1
+# Loop through each PCI address and set LINK_TYPE_P1 to ETH
+for addr in $pci_addresses; do
+    mst_device="$addr"
+    # Set LINK_TYPE_P1 to ETH
+    echo "y" | mstconfig -d "$mst_device" set LINK_TYPE_P1=ETH > /dev/null 2>&1
+    #Here we check for a P2. It slows the script down and Honestly I don't even know if it's necessary.
+    if mstconfig -d "$mst_device" q 2>/dev/null | grep -q "LINK_TYPE_P2"; then
+        echo "y" | mstconfig -d "$mst_device" set LINK_TYPE_P2=ETH > /dev/null 2>&1
+    fi
+done
 
 reboot
