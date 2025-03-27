@@ -1,0 +1,43 @@
+#!/bin/bash
+
+echo "Before doing this, have you"
+echo "Added the 3 DNS Entries to NetDot and added the node to Puppet???"
+
+# Prompt the user for nodename
+read -p "Enter nodename: " nodename
+read -p "Enter BMC IP: " bmcip
+read -p "Enter MGMT IP: " mgmtip
+read -p "Enter mac address: " macaddress
+
+# Check if an argument is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <nodename>"
+    exit 1
+fi
+
+# Assign the first argument to the variable "nodename"
+nodename=$1
+
+echo "Processing node: $nodename"
+
+# ssh $nodename "hostname"
+mkdef $nodename groups=compute,physical,all
+chdef $nodename nicdevices.hsn0.1840=hsn0
+chdef $nodename nichostnamesuffixes.hsn0.1840=-hsn0-1840
+chdef $nodename nicnetworks.hsn0.1840=public_net
+chdef $nodename nictypes.hsn0.1840=vlan
+chdef $nodename nictypes.hsn0=Ethernet
+chdef $nodename ip=$bmcip
+chdef $nodename bmc=$bmcip
+chdef $nodename mac=$macaddress
+
+history | grep history
+
+read -p "Enter an image name: " imagename
+nodeset $nodename $imagename
+
+makedhcp -a
+makedhcp -n
+makehosts
+
+exit 0
