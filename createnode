@@ -35,6 +35,16 @@ if [ "$response" != "y" ]; then
 fi
 nodeset $nodename $imagename
 
+echo "The following definition has been created:"
+lsdef $nodename
+
+read -p "Continue? (y/n):" response2
+if [ "$response2" != "y" ]; then
+    rmdef $nodename
+    echo "Exiting script."
+    exit 1
+fi
+
 makedhcp -a
 makedhcp -n
 makehosts
