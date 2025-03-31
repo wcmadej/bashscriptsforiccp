@@ -3,28 +3,28 @@
 echo "Before doing this, have you"
 echo "Added the 3 DNS Entries to NetDot and added the node to Puppet???"
 
-# Prompt the user for nodename
+# Prompt the user for node name and other information
 read -p "Enter nodename: " nodename
 read -p "Enter BMC IP: " bmcip
 read -p "Enter MGMT IP: " mgmtip
-read -p "Enter mac address: " macaddress
 read -p "Enter public IP: " publicip
+read -p "Enter mac address: " macaddress
 
-echo "Processing node: $nodename"
-
-# ssh $nodename "hostname"
+#Take user provided information and create a definition from it
 mkdef $nodename groups=compute,physical,all
 chdef $nodename nicdevices.hsn0.1840=hsn0
 chdef $nodename nichostnamesuffixes.hsn0.1840=-hsn0-1840
 chdef $nodename nicnetworks.hsn0.1840=public_net
 chdef $nodename nictypes.hsn0.1840=vlan
 chdef $nodename nictypes.hsn0=Ethernet
-chdef $nodename nicips.hsn0.1840=$publicipdd
-chdef $nodename ip=$bmcip
+chdef $nodename nicips.hsn0.1840=$publicip
+chdef $nodename ip=$mgmtip
 chdef $nodename bmc=$bmcip
 chdef $nodename mac=$macaddress
 
-imagename=rhels9.4.0-x86_64-netboot-rh94base250108
+echo "Processing node: $nodename"
+
+imagename=rhels9.4.0-x86_64-netboot-rh94base250108 #This s hard coded in because I didn't want to make it an enviromental variable, hence the check. Will need to be updated!
 echo "using image $imagename"
 read -p "Is using $imagename good? (y/n): " response
 
@@ -33,11 +33,11 @@ if [ "$response" != "y" ]; then
     echo "Exiting script."
     exit 1
 fi
-nodeset $nodename $imagename
 
 echo "The following definition has been created:"
 lsdef $nodename
 
+#Check to see if everything is right. If something is wrong, here's your chance!
 read -p "Continue? (y/n):" response2
 if [ "$response2" != "y" ]; then
     rmdef $nodename
@@ -45,6 +45,8 @@ if [ "$response2" != "y" ]; then
     exit 1
 fi
 
+#If everything is right, set the image, host file, and dhcp with the new node.
+nodeset $nodename $imagename
 makedhcp -a
 makedhcp -n
 makehosts
