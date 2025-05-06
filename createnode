@@ -9,6 +9,8 @@ read -p "Enter BMC IP: " bmcip
 read -p "Enter MGMT IP: " mgmtip
 read -p "Enter public IP: " publicip
 read -p "Enter mac address: " macaddress
+read -p "Enter Rack Location in Rack # U# format: " nodeloc
+read -p "Enter rack location in (x,y) coordinates" nodelocxy
 
 #Take user provided information and create a definition from it
 mkdef $nodename groups=compute,physical,all
@@ -21,6 +23,8 @@ chdef $nodename nicips.hsn0.1840=$publicip
 chdef $nodename ip=$mgmtip
 chdef $nodename bmc=$bmcip
 chdef $nodename mac=$macaddress
+chdef $nodename nodelocation=$nodeloc
+chdef $nodename xynodelocation=$nodelocxy
 
 echo "Processing node: $nodename"
 
