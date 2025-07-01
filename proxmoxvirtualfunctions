@@ -36,6 +36,17 @@ print_vf_log() {
     grep -i hostpci /var/log/syslog 2>/dev/null || echo "No entries found or /var/log/syslog not present"
 }
 
+print_vf_mapping() {
+    echo -e "PCI Address\tPF Interface\tDevice Name"
+    for vf_path in /sys/class/net/*/device/virtfn*; do
+        [ -e "$vf_path" ] || continue
+        vf_addr=$(basename "$(readlink -f "$vf_path")")
+        pf_netdev=$(basename "$(dirname "$(dirname "$vf_path")")")
+        devname=$(ethtool -i "$pf_netdev" 2>/dev/null | grep bus-info | awk '{print $2}')
+        echo -e "$vf_addr\t$pf_netdev\t$driver\t$devname"
+    done
+}
+
 usage() {
     echo "Usage: $0 [OPTION]"
     echo "Options:"
@@ -43,6 +54,7 @@ usage() {
     echo "  -f, --all      Show all Virtual Functions on the host"
     echo "  -a, --avail    Show unassigned Virtual Functions"
     echo "  -l, --log      Show historical VF mapping entries from syslog"
+    echo "  -m, --map      List all VFs and their associated PF (IB interface)"
     echo "  -h, --help     Display this help message"
     exit 0
 }
@@ -64,6 +76,9 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         -l|--log)
             print_vf_log
+            ;;
+        -m|--map)
+            print_vf_mapping
             ;;
         -h|--help)
             usage
