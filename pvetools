@@ -1,0 +1,111 @@
+#!/bin/bash
+# qm_stats.sh — Show Proxmox VM CPU and memory usage
+
+# Function a: show VM CPU usage
+a() {
+    # Extract PIDs from qm list
+    pids=$(qm list | awk 'NR>1 && $6>0 {print $6}' | paste -sd,)
+
+    # If no running VMs
+    if [[ -z "$pids" ]]; then
+        echo "No running VMs found."
+        return
+    fi
+
+    # Run top for all PIDs, strip headers, keep PID and %CPU
+    top -b -n1 -p "$pids" | awk 'NR>7 {print $1, $9}' > /dev/shm/topcpu.$$
+
+    # Print header
+    printf "%-5s %-15s %s\n" "VMID" "NAME" "%CPU"
+
+    # Join qm list with CPU usage
+    qm list | awk 'NR>1 && $6>0 {print $1, $2, $6}' | while read vmid name pid; do
+        cpu=$(grep -w "$pid" /dev/shm/topcpu.$$ | awk '{print $2}')
+        printf "%-5s %-15s %s\n" "$vmid" "$name" "$cpu"
+    done
+
+    rm -f /dev/shm/topcpu.$$
+}
+
+# Function b: show VM memory vs system memory
+b() {
+    # Sum all MEM(MB) values from qm list and convert MB -> GB
+    total_vm_mem=$(qm list | awk 'NR>1 {sum+=$4} END {printf "%.3f", sum/1024}')
+
+    # Get memory values in MB (more precise than free -g)
+    read total used free shared buff_cache available <<< $(free -m | awk '/^Mem:/ {print $2, $3, $4, $5, $6, $7}')
+    
+    # Convert system total to GB with 3 decimals
+    sys_total=$(awk -v t=$total 'BEGIN {printf "%.3f", t/1024}')
+    
+    # Compute actual used = total - free - buff/cache, convert MB -> GB with 3 decimals
+    sys_used=$(awk -v t=$total -v f=$free -v b=$buff_cache 'BEGIN {printf "%.3f", (t - f - b)/1024}')
+
+    # Print results
+    printf "Total VM Memory (GB): %s\n" "$total_vm_mem"
+    printf "Total Used System Memory (GB): %s\n" "$sys_used"
+
+    # Check for oversubscription
+    awk -v vm="$total_vm_mem" -v sys="$sys_total" 'BEGIN {
+        if (vm > sys) {
+            print "WARNING! The hypervisor is oversubscribed."
+        }
+    }'
+}
+
+c() {
+    zfs list | awk '
+        NR==1 {next}   # skip header
+        $1 !~ "/" {    # only top-level datasets
+            used_bytes = parse_size($2);
+            avail_bytes = parse_size($3);
+            total_bytes = used_bytes + avail_bytes;
+            pct = (used_bytes / total_bytes) * 100;
+
+            printf "ZFS Volume:   %s\n", $1;
+            printf "  Used:        %.2f TB\n", used_bytes / (1000^4);
+            printf "  Available:   %.2f TB\n", avail_bytes / (1000^4);
+            printf "  Total Size:  %.2f TB\n", total_bytes / (1000^4);
+            printf "  Percent Used: %.1f%%\n\n", pct;
+        }
+
+        function parse_size(s,    n,u,mult) {
+            n = substr(s, 1, length(s)-1);
+            u = substr(s, length(s), 1);
+            if (u=="K") mult=1024;
+            else if (u=="M") mult=1024^2;
+            else if (u=="G") mult=1024^3;
+            else if (u=="T") mult=1024^4;
+            else mult=1;
+            return n*mult;
+        }
+    '
+   echo "Note that values are converted to TB from TiB to align with units presnted in the web GUI."
+}
+
+# Help function
+usage() {
+    echo "Usage: $0 [option]"
+    echo
+    echo "Options:"
+    echo "  -c    Show VM CPU usage"
+    echo "  -m    Show VM memory usage vs system memory"
+    echo "  -z    Show ZFS volume usage"
+    echo "  -h    Show this help message"
+}
+
+# Parse options
+while getopts ":czmh" opt; do
+    case $opt in
+        c) a ;;
+	z) c ;;
+        m) b ;;
+        h) usage ;;
+        *) usage; exit 1 ;;
+    esac
+done
+
+# If no option provided, show help
+if [ $OPTIND -eq 1 ]; then
+    usage
+fi
